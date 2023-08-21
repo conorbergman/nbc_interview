@@ -13,6 +13,30 @@ class IoCContainer {
 
   public constructor(registeredServices: Map<string, ServiceDescriptor<any>>) {
     this.services = registeredServices;
+    this.resolveDependencies()
+  }
+
+
+  private resolveDependencies() {
+    let allDeps = new Array<string>();
+    // check map 
+    for (let [serviceName, service] of this.services) {
+      let dependencies = service.serviceConstructor.dependencies;
+      if (dependencies === undefined) {
+        continue;
+      }
+      for (let dep of dependencies) {
+        let depDescriptor = this.services.get(dep);
+        if (depDescriptor === undefined) {
+          continue;
+        }
+        // Do traversal on each dependency, check if serviceName in traversal
+
+        if (depDescriptor.serviceConstructor.dependencies && depDescriptor.serviceConstructor.dependencies.includes(serviceName)) {
+          throw new Error("Circular Dependency");
+        }
+      }
+    }
   }
 
   private createInstance(serviceDescriptor: ServiceDescriptor<any>) {

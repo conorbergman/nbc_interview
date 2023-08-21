@@ -131,5 +131,64 @@ describe("IoC Container Tests", () => {
       let service1 = container.getService("OuterService");
       expect(service1.dependency.name).toBe("Singleton Dependency");
       expect(service1.dependency.dependency.name).toBe("Nested Dependency");
-    });
+    }),
+    test("Create service with circular dependency", () => {
+      const ids = idGenerator();
+
+      class OuterClass {
+        id;
+        name;
+        dependency;
+        constructor(dependency: InnnerClass) {
+          this.id = ids.next().value;
+          this.name = "Outer Dependency";
+          this.dependency = dependency;
+        }
+      }
+
+      class InnnerClass {
+        id;
+        name;
+        dependency;
+        constructor(dependency: OuterClass) {
+          this.id = ids.next().value;
+          this.name = "Inner Dependency";
+          this.dependency = dependency;
+        }
+      }
+
+      class ThirdClass {
+        id;
+        name;
+        dependency;
+        constructor(dependency: OuterClass) {
+          this.id = ids.next().value;
+          this.name = "Inner Dependency";
+          this.dependency = dependency;
+        }
+      }
+
+
+      let serviceProvider = new ServiceProvider();
+      serviceProvider.registerTransient("OuterService", OuterClass, [
+        "InnerService",
+      ]);
+
+      // Does not throw exception when no circular dependency
+      serviceProvider.generateContainer();
+
+      serviceProvider.registerSingleton(
+        "InnerService",
+        InnnerClass,
+        ["ThirdService"]
+      );
+
+      serviceProvider.registerSingleton(
+        "ThirdService",
+        ThirdClass,
+        ["OuterService"]
+      );
+
+      expect(() => serviceProvider.generateContainer()).toThrow(Error);
+    })
 });
